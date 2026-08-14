@@ -13,10 +13,6 @@ pub const c = @cImport({
     @cInclude("NRIUpscaler.h");
 });
 
-// ===========================================================================
-// Opaque handle aliases
-// ===========================================================================
-
 pub const Device = c.NriDevice;
 pub const Queue = c.NriQueue;
 pub const Fence = c.NriFence;
