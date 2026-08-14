@@ -33,11 +33,6 @@ pub const DescriptorPool = c.NriDescriptorPool;
 pub const DescriptorSet = c.NriDescriptorSet;
 pub const QueryPool = c.NriQueryPool;
 pub const Memory = c.NriMemory;
-
-// ===========================================================================
-// Result + common constants
-// ===========================================================================
-
 pub const Result = c.NriResult;
 
 pub fn ok(result: Result) bool {
@@ -45,12 +40,9 @@ pub fn ok(result: Result) bool {
 }
 
 pub const SWAPCHAIN_SEMAPHORE = c.NRI_SWAPCHAIN_SEMAPHORE;
+pub const log = std.log.scoped(.nri);
 
 pub const GraphicsApiVk: c.NriGraphicsAPI = 8;
-
-// ===========================================================================
-// Per-device interface tables
-// ===========================================================================
 
 pub const Interfaces = struct {
     core: c.NriCoreInterface,
@@ -59,6 +51,17 @@ pub const Interfaces = struct {
     mesh: c.NriMeshShaderInterface,
     rt: c.NriRayTracingInterface,
 };
+
+pub fn getRecommendedGfxApi() u8 {
+    const builtin = @import("builtin");
+    switch (builtin.os.tag) {
+        .linux => c.NriGraphicsAPI_VK,
+        .macos => c.NriGraphicsAPI_WGPU,
+        .windows => c.NriGraphicsAPI_D3D12,
+        .emscripten => c.NriGraphicsAPI_WGPU,
+        else => c.NriGraphicsAPI_NONE,
+    }
+}
 
 pub fn getInterfaces(device: *Device) !Interfaces {
     var ifs: Interfaces = undefined;
@@ -72,16 +75,11 @@ pub fn getInterfaces(device: *Device) !Interfaces {
 
 fn getInterface(device: *Device, comptime name: [*:0]const u8, out: anytype) !void {
     if (!ok(c.nriGetInterface(device, name, @sizeOf(@TypeOf(out.*)), out))) {
-        std.log.err("NRI: nriGetInterface(\"{s}\") failed", .{name});
+        log.err("nriGetInterface(\"{s}\") failed", .{name});
         return error.NriInterfaceFailed;
     }
 }
 
-// ===========================================================================
-// Device creation
-// ===========================================================================
-
-/// Mirrors the validation messages that the old C++ shim printed.
 fn messageCallback(
     message_type: c.NriMessage,
     file: [*c]const u8,
@@ -90,13 +88,19 @@ fn messageCallback(
     user_arg: ?*anyopaque,
 ) callconv(.c) void {
     _ = user_arg;
-    const level = switch (message_type) {
-        c.NriMessage_ERROR => "ERROR",
-        c.NriMessage_WARNING => "WARN ",
-        else => "INFO ",
+    const level: std.log.Level = switch (message_type) {
+        c.NriMessage_ERROR => .err,
+        c.NriMessage_WARNING => .warn,
+        else => .info,
     };
-    std.debug.print("[NRI][{s}] {s}:{d} {s}\n", .{
-        level,
+
+    const func = switch (level) {
+        .warn => log.warn,
+        .debug => log.debug,
+        .err => log.err,
+        .info => log.info,
+    };
+    func("{s}:{d} {s}", .{
         std.mem.span(file),
         line,
         std.mem.span(message),
@@ -128,3 +132,4 @@ pub fn createDevice(graphics_api: c.NriGraphicsAPI, adapter_index: u32, enable_v
     if (!ok(c.nriCreateDevice(&desc, &device))) return error.NriCreateDeviceFailed;
     return device.?;
 }
+
