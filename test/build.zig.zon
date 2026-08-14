@@ -1,0 +1,14 @@
+.{
+    .name = .nri_test,
+    .version = "0.0.0",
+    .fingerprint = 0xb7370b7a832a6998,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .nri_zig = .{ .path = ".." },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

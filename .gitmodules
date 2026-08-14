@@ -1,3 +1,0 @@
-[submodule "thirdparty/nri"]
-	path = thirdparty/nri
-	url = https://github.com/NVIDIA-RTX/NRI

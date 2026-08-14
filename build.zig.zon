@@ -4,6 +4,15 @@
     .minimum_zig_version = "0.16.0",
     .description = "Zig bindings for NVIDIA-RTX/NRI (v180)",
     .licenses = .{ .mit = {} },
-    .paths = .{""},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+        "LICENSE",
+        "test",
+        "src",
+        "scripts",
+        "thirdparty/nri",
+    },
     .fingerprint = 0x39cc8757d5762e36,
 }

@@ -5,12 +5,10 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
-    // -----------------------------------------------------------------------
     // The binding module. Consumers import it via .module("root") from their
-    // build.zig.zon dependency; it compiles against the NRI headers vendored
-    // in the thirdparty/nri submodule, so no cmake run is needed to use the
-    // bindings themselves (only to produce libNRI for linking).
-    // -----------------------------------------------------------------------
+    // build.zig.zon dependency. It compiles against the NRI headers vendored
+    // in thirdparty/nri, so no cmake run is needed to use the bindings
+    // themselves (only to produce libNRI for linking).
     const mod = b.addModule("root", .{
         .link_libc = true,
         .link_libcpp = true,
@@ -20,42 +18,24 @@ pub fn build(b: *std.Build) void {
     });
     mod.addIncludePath(b.path("thirdparty/nri/Include"));
     mod.addIncludePath(b.path("thirdparty/nri/Include/Extensions"));
-
-    // -----------------------------------------------------------------------
-    // Optional example: builds libNRI from the submodule (cmake) and links a
-    // small program that enumerates adapters through the bindings. This is
-    // also what `zig build` runs to validate the whole pipeline.
-    // -----------------------------------------------------------------------
-    const exe = b.addExecutable(.{
-        .name = "nri-example",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-        }),
-    });
-    exe.root_module.addImport("nri", mod);
-    _ = buildNri(b, exe, optimize, target);
-    b.installArtifact(exe);
-
-    const run_artifact = b.addRunArtifact(exe);
-    const run_step = b.step("run", "Run the example (enumerates adapters)");
-    run_step.dependOn(&run_artifact.step);
 }
 
-/// Builds the NRI shared library (via cmake in the thirdparty/nri submodule)
-/// and links it into `exe`. Also usable by consumers of the package: call
-/// `nri_zig.buildNri(b, exe, optimize, target)` from their own build.zig.
+/// Builds the NRI shared library (via cmake in the vendored thirdparty/nri)
+/// and links it into `exe`. Consumers call this from their own build.zig:
+///
+///     const nri_zig_build = @import("nri_zig");
+///     _ = nri_zig_build.buildNri(nri_zig, exe, optimize, target);
 pub fn buildNri(
-    b: *std.Build,
+    dep: *std.Build.Dependency,
     exe: *std.Build.Step.Compile,
     optimize: std.builtin.OptimizeMode,
     target: std.Build.ResolvedTarget,
 ) *std.Build.Step {
     _ = optimize;
+    const b = dep.builder;
 
     const nriRunSh = struct {
-        fn func(bu: *std.Build, script_name: []const u8, args: []const []const u8) *std.Build.Step.Run {
+        fn func(bu: *std.Build, pkg: *std.Build.Dependency, script_name: []const u8, args: []const []const u8) *std.Build.Step.Run {
             const is_w32 = builtin.os.tag == .windows;
 
             const file_format = if (is_w32) ".bat" else ".sh";
@@ -71,18 +51,18 @@ pub fn buildNri(
             cmd.addArg(full_file);
             cmd.addArgs(args);
 
-            cmd.cwd = bu.path("thirdparty/nri");
+            cmd.cwd = pkg.path("thirdparty/nri");
 
             return cmd;
         }
     }.func;
 
-    const deploy = nriRunSh(b, "1-Deploy", &.{
+    const deploy = nriRunSh(b, dep, "1-Deploy", &.{
         "-DNRI_STATIC_LIBRARY=OFF",
-        std.fmt.allocPrint(b.allocator, "-DCMAKE_CXX_COMPILER={s}", .{b.path("scripts/nri-cxx-wrapper.sh").getPath(b)}) catch @panic("OOM"),
+        std.fmt.allocPrint(b.allocator, "-DCMAKE_CXX_COMPILER={s}", .{dep.path("scripts/nri-cxx-wrapper.sh").getPath(b)}) catch @panic("OOM"),
     });
-    const cmake_build = nriRunSh(b, "2-Build", &.{});
-    const prepare = nriRunSh(b, "3-PrepareSDK", &.{});
+    const cmake_build = nriRunSh(b, dep, "2-Build", &.{});
+    const prepare = nriRunSh(b, dep, "3-PrepareSDK", &.{});
 
     cmake_build.step.dependOn(&deploy.step);
     prepare.step.dependOn(&cmake_build.step);
@@ -92,14 +72,14 @@ pub fn buildNri(
     exe.root_module.link_libc = true;
     exe.root_module.link_libcpp = true;
 
-    exe.root_module.addIncludePath(b.path("thirdparty/nri/_NRI_SDK/Include"));
-    exe.root_module.addIncludePath(b.path("thirdparty/nri/_NRI_SDK/Include/Extensions"));
+    exe.root_module.addIncludePath(dep.path("thirdparty/nri/_NRI_SDK/Include"));
+    exe.root_module.addIncludePath(dep.path("thirdparty/nri/_NRI_SDK/Include/Extensions"));
 
     if (target.result.os.tag == .windows) {
-        exe.root_module.addLibraryPath(b.path("thirdparty/nri/_NRI_SDK/Lib/Release"));
+        exe.root_module.addLibraryPath(dep.path("thirdparty/nri/_NRI_SDK/Lib/Release"));
     } else {
-        exe.root_module.addLibraryPath(b.path("thirdparty/nri/_NRI_SDK/Lib"));
-        exe.root_module.addLibraryPath(b.path("thirdparty/nri/_Bin"));
+        exe.root_module.addLibraryPath(dep.path("thirdparty/nri/_NRI_SDK/Lib"));
+        exe.root_module.addLibraryPath(dep.path("thirdparty/nri/_Bin"));
     }
 
     exe.root_module.linkSystemLibrary("NRI", .{});
