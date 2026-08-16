@@ -9,10 +9,11 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
+    nri.log.info("Recommended GPU: {d}", .{nri.getRecommendedGfxApi()});
+
     nri.log.info("adapters ({d}):\n", .{count});
     for (adapters[0..count]) |adapter| {
         const name = std.mem.span(@as([*:0]const u8, @ptrCast(&adapter.name)));
         nri.log.info("  {s}\n", .{name});
     }
 }
-

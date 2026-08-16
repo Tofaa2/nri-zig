@@ -50,13 +50,13 @@ pub const Interfaces = struct {
 
 pub fn getRecommendedGfxApi() u8 {
     const builtin = @import("builtin");
-    switch (builtin.os.tag) {
+    return switch (builtin.os.tag) {
         .linux => c.NriGraphicsAPI_VK,
         .macos => c.NriGraphicsAPI_WGPU,
         .windows => c.NriGraphicsAPI_D3D12,
         .emscripten => c.NriGraphicsAPI_WGPU,
         else => c.NriGraphicsAPI_NONE,
-    }
+    };
 }
 
 pub fn getInterfaces(device: *Device) !Interfaces {
@@ -99,18 +99,6 @@ fn messageCallback(
         .err => log.err("{s}:{d} {s}", .{ m_file, line, m_message }),
         .info => log.info("{s}:{d} {s}", .{ m_file, line, m_message }),
     }
-
-    //    const func = switch (level) {
-    //        .warn => log.warn,
-    //        .debug => log.debug,
-    //        .err => log.err,
-    //        .info => log.info,
-    //    };
-    //    func("{s}:{d} {s}", .{
-    //        std.mem.span(file),
-    //        line,
-    //        std.mem.span(message),
-    //    });
 }
 
 pub fn enumerateAdapters(out: []c.NriAdapterDesc) usize {
