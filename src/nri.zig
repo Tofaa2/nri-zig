@@ -94,23 +94,23 @@ fn messageCallback(
     const m_message = std.mem.span(message);
 
     switch (level) {
-        .warn => log.warn("{s}:{d} {s}", .{ m_file, line, m_message}),
-        .debug => log.debug("{s}:{d} {s}", .{ m_file, line, m_message}),
-        .err => log.err("{s}:{d} {s}", .{ m_file, line, m_message}),
-        .info => log.info("{s}:{d} {s}", .{ m_file, line, m_message}),
-    };
+        .warn => log.warn("{s}:{d} {s}", .{ m_file, line, m_message }),
+        .debug => log.debug("{s}:{d} {s}", .{ m_file, line, m_message }),
+        .err => log.err("{s}:{d} {s}", .{ m_file, line, m_message }),
+        .info => log.info("{s}:{d} {s}", .{ m_file, line, m_message }),
+    }
 
-//    const func = switch (level) {
-//        .warn => log.warn,
-//        .debug => log.debug,
-//        .err => log.err,
-//        .info => log.info,
-//    };
-//    func("{s}:{d} {s}", .{
-//        std.mem.span(file),
-//        line,
-//        std.mem.span(message),
-//    });
+    //    const func = switch (level) {
+    //        .warn => log.warn,
+    //        .debug => log.debug,
+    //        .err => log.err,
+    //        .info => log.info,
+    //    };
+    //    func("{s}:{d} {s}", .{
+    //        std.mem.span(file),
+    //        line,
+    //        std.mem.span(message),
+    //    });
 }
 
 pub fn enumerateAdapters(out: []c.NriAdapterDesc) usize {
@@ -138,4 +138,3 @@ pub fn createDevice(graphics_api: c.NriGraphicsAPI, adapter_index: u32, enable_v
     if (!ok(c.nriCreateDevice(&desc, &device))) return error.NriCreateDeviceFailed;
     return device.?;
 }
-
