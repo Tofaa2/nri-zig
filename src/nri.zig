@@ -90,17 +90,27 @@ fn messageCallback(
         else => .info,
     };
 
-    const func = switch (level) {
-        .warn => log.warn,
-        .debug => log.debug,
-        .err => log.err,
-        .info => log.info,
+    const m_file = std.mem.span(file);
+    const m_message = std.mem.span(message);
+
+    switch (level) {
+        .warn => log.warn("{s}:{d} {s}", .{ m_file, line, m_message}),
+        .debug => log.debug("{s}:{d} {s}", .{ m_file, line, m_message}),
+        .err => log.err("{s}:{d} {s}", .{ m_file, line, m_message}),
+        .info => log.info("{s}:{d} {s}", .{ m_file, line, m_message}),
     };
-    func("{s}:{d} {s}", .{
-        std.mem.span(file),
-        line,
-        std.mem.span(message),
-    });
+
+//    const func = switch (level) {
+//        .warn => log.warn,
+//        .debug => log.debug,
+//        .err => log.err,
+//        .info => log.info,
+//    };
+//    func("{s}:{d} {s}", .{
+//        std.mem.span(file),
+//        line,
+//        std.mem.span(message),
+//    });
 }
 
 pub fn enumerateAdapters(out: []c.NriAdapterDesc) usize {
